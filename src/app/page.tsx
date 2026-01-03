@@ -1,18 +1,16 @@
 import { createTable } from '@/lib/db';
 import { getNotes, addNote } from './actions';
-import StickyNote from '@/components/StickyNote';
+import Board from '@/components/Board'; // Import the new component
 import { Plus, Lock, Palette, Type, AlignLeft } from 'lucide-react';
-import { cookies } from 'next/headers'; // Import cookies
+import { cookies } from 'next/headers';
 
 export default async function Home() {
   await createTable();
   const notes = await getNotes();
 
-  // Ensure cookie exists for rate limiting
+  // Initialize cookie
   const cookieStore = await cookies();
   const userId = cookieStore.get('user_id')?.value;
-  // Note: We can't SET cookies in a Server Component directly, 
-  // but the Server Action handles setting it if it's missing on the first post.
 
   const colors = [
     { name: 'Yellow', value: 'bg-yellow-200' },
@@ -26,7 +24,7 @@ export default async function Home() {
   return (
     <main className="h-screen w-full bg-grid-paper flex flex-col md:flex-row overflow-hidden relative text-slate-800">
 
-      {/* --- SIDEBAR --- */}
+      {/* SIDEBAR */}
       <div className="z-30 w-full md:w-[350px] bg-white/80 backdrop-blur-xl border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col h-auto md:h-full transition-all">
         
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/50">
@@ -41,8 +39,6 @@ export default async function Home() {
         
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           <form action={addNote} className="flex flex-col gap-6">
-            
-            {/* Limit Warning */}
             <div className="text-[10px] text-slate-400 bg-slate-50 p-2 rounded border border-slate-200">
                ⚠️ Limit: 3 Notes per person.
             </div>
@@ -51,12 +47,12 @@ export default async function Home() {
               <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-1.5 uppercase tracking-wide">
                 <Type size={12} /> Title
               </label>
-              <input name="title" placeholder="Title..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" />
+              <input name="title" placeholder="Ex: Ideas" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" />
             </div>
 
             <div className="group">
                <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-1.5 uppercase tracking-wide"><AlignLeft size={12} /> Content</label>
-              <textarea name="text" required placeholder="Note content..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 h-32 resize-none shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" />
+              <textarea name="text" required placeholder="Write something..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 h-32 resize-none shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" />
             </div>
 
             <div>
@@ -73,7 +69,7 @@ export default async function Home() {
 
             <div>
                <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-1.5 uppercase tracking-wide"><Lock size={12} /> Password (Optional)</label>
-              <input type="password" name="password" placeholder="Lock code OR Admin Password" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:bg-white focus:ring-2 focus:ring-red-500/10 focus:border-red-400 outline-none transition-all" />
+              <input type="password" name="password" placeholder="Set a lock code" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:bg-white focus:ring-2 focus:ring-red-500/10 focus:border-red-400 outline-none transition-all" />
             </div>
 
             <button type="submit" className="mt-2 w-full bg-slate-900 hover:bg-black text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2">
@@ -83,14 +79,9 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="flex-1 relative overflow-auto z-10 cursor-grab active:cursor-grabbing">
-        <div className="md:hidden p-6 grid grid-cols-1 gap-4 pb-32">
-           {notes.map((note) => <StickyNote key={note.id} note={note} />)}
-        </div>
-        <div className="hidden md:block w-[3000px] h-[3000px] relative">
-           {notes.map((note) => <StickyNote key={note.id} note={note} />)}
-        </div>
-      </div>
+      {/* LOAD THE BOARD (With Live Features) */}
+      <Board initialNotes={notes} />
+      
     </main>
   );
 }
