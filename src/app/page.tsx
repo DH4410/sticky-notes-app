@@ -1,80 +1,107 @@
 import { createTable } from '@/lib/db';
 import { getNotes, addNote } from './actions';
 import StickyNote from '@/components/StickyNote';
-import { PlusCircle } from 'lucide-react';
+import { Plus, Lock } from 'lucide-react';
 
 export default async function Home() {
   await createTable();
   const notes = await getNotes();
 
+  const colors = [
+    { name: 'Yellow', value: 'bg-yellow-200' },
+    { name: 'Blue', value: 'bg-cyan-200' },
+    { name: 'Green', value: 'bg-green-300' },
+    { name: 'Pink', value: 'bg-pink-300' },
+    { name: 'Purple', value: 'bg-purple-300' },
+    { name: 'Orange', value: 'bg-orange-300' },
+  ];
+
   return (
-    <main className="min-h-screen bg-[#f8f9fa] relative flex flex-col md:flex-row">
+    <main className="min-h-screen bg-stone-100 relative flex flex-col md:flex-row overflow-hidden">
       
-      {/* BACKGROUND PATTERN (Dots) */}
-      <div className="absolute inset-0 z-0 opacity-[0.4]" 
-           style={{backgroundImage: 'radial-gradient(#a3a3a3 1.5px, transparent 1.5px)', backgroundSize: '24px 24px'}} 
+      {/* Background Dots */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
+           style={{backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px'}} 
       />
 
-      {/* --- SIDEBAR / INPUT AREA --- */}
-      <div className="z-10 w-full md:w-96 md:h-screen bg-white/90 backdrop-blur-md shadow-xl border-r border-gray-200 p-6 flex flex-col md:sticky md:top-0">
-        <h1 className="font-extrabold text-3xl mb-6 text-gray-900 tracking-tight">
-          Sticky<span className="text-yellow-500">Board</span>.
-        </h1>
+      {/* --- SIDEBAR FORM --- */}
+      <div className="z-20 w-full md:w-80 bg-white border-r border-stone-200 shadow-2xl flex flex-col md:h-screen">
+        <div className="p-6 bg-stone-900 text-white">
+          <h1 className="font-bold text-2xl tracking-tight">Stickies.</h1>
+          <p className="text-stone-400 text-xs mt-1">Shared Board</p>
+        </div>
         
-        <form action={addNote} className="flex flex-col gap-4 bg-white p-1 rounded-xl">
-          <div className="relative">
+        <form action={addNote} className="p-6 flex flex-col gap-4 flex-1 overflow-y-auto">
+          
+          {/* Title Input */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-stone-500 uppercase">Title</label>
+            <input
+              name="title"
+              placeholder="Meeting Notes"
+              className="w-full p-2 border border-stone-300 rounded-md focus:ring-2 focus:ring-stone-400 outline-none font-bold"
+            />
+          </div>
+
+          {/* Content Input */}
+          <div className="space-y-1">
+             <label className="text-xs font-bold text-stone-500 uppercase">Content</label>
             <textarea
               name="text"
               required
-              placeholder="What's on your mind?"
-              className="w-full p-4 border-2 border-gray-100 rounded-xl resize-none text-gray-700 focus:outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/10 transition-all bg-gray-50 min-h-[120px]"
+              placeholder="Don't forget to..."
+              className="w-full p-2 border border-stone-300 rounded-md h-32 resize-none focus:ring-2 focus:ring-stone-400 outline-none"
             />
           </div>
-          
-          <div className="flex gap-2">
-            <input 
+
+          {/* Color Picker */}
+          <div className="space-y-1">
+             <label className="text-xs font-bold text-stone-500 uppercase">Color</label>
+             <div className="flex gap-2 flex-wrap">
+               {colors.map((c) => (
+                 <label key={c.value} className="cursor-pointer relative">
+                   <input type="radio" name="color" value={c.value} defaultChecked={c.name === 'Yellow'} className="peer sr-only" />
+                   <div className={`w-8 h-8 rounded-full ${c.value} border-2 border-transparent peer-checked:border-black peer-checked:scale-110 transition-all shadow-sm`}></div>
+                 </label>
+               ))}
+             </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-1 pt-4 border-t border-stone-100">
+             <label className="text-xs font-bold text-stone-500 uppercase flex items-center gap-1">
+               <Lock size={12} /> Password (Optional)
+             </label>
+            <input
               type="password"
               name="password"
-              placeholder="Lock password (Optional)"
-              className="w-full p-3 border-2 border-gray-100 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-blue-400 bg-gray-50"
+              placeholder="Secret123"
+              className="w-full p-2 border border-stone-300 rounded-md text-sm bg-stone-50"
             />
-            <button
-              type="submit"
-              className="bg-black text-white px-6 rounded-xl hover:bg-gray-800 transition flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <PlusCircle size={20} />
-            </button>
           </div>
-        </form>
 
-        <div className="mt-8 text-sm text-gray-500 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100">
-          <p className="font-bold text-blue-800">How it works:</p>
-          <ul className="list-disc pl-4 space-y-1">
-            <li><strong>Mobile:</strong> View as a list.</li>
-            <li><strong>Desktop:</strong> Drag notes around.</li>
-            <li>Add a password to lock/protect a note.</li>
-          </ul>
-        </div>
+          <button
+            type="submit"
+            className="mt-2 bg-stone-900 text-white py-3 rounded-md font-bold hover:bg-black transition flex items-center justify-center gap-2"
+          >
+            <Plus size={18} /> Add Sticky
+          </button>
+        </form>
       </div>
 
       {/* --- BOARD AREA --- */}
-      <div className="relative flex-1 z-0 p-4 md:p-0 overflow-x-hidden md:overflow-auto">
-        
-        {/* MOBILE VIEW: Grid Layout */}
-        <div className="md:hidden grid grid-cols-1 gap-4 pb-20">
-          {notes.map((note) => (
-             <StickyNote key={note.id} note={note} />
-          ))}
-          {notes.length === 0 && (
-             <div className="text-center text-gray-400 mt-10">No notes yet. Add one above!</div>
-          )}
+      <div className="relative flex-1 bg-stone-100 overflow-hidden">
+        {/* Mobile: Scrollable List */}
+        <div className="md:hidden h-full overflow-y-auto p-4 space-y-4">
+           {notes.map((note) => <StickyNote key={note.id} note={note} />)}
+           <div className="h-20"></div> {/* Spacer */}
         </div>
 
-        {/* DESKTOP VIEW: Infinite Canvas */}
-        <div className="hidden md:block w-[2000px] h-[2000px] relative">
-          {notes.map((note) => (
-            <StickyNote key={note.id} note={note} />
-          ))}
+        {/* Desktop: Canvas */}
+        <div className="hidden md:block w-full h-full overflow-auto">
+           <div className="w-[2000px] h-[2000px] relative">
+              {notes.map((note) => <StickyNote key={note.id} note={note} />)}
+           </div>
         </div>
       </div>
     </main>

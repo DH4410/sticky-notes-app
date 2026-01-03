@@ -1,11 +1,11 @@
-// src/lib/db.ts
 import { sql } from '@vercel/postgres';
 
 export async function createTable() {
-  // We add a 'password' column here
+  // We added 'title' and kept 'password'
   await sql`
     CREATE TABLE IF NOT EXISTS notes (
       id SERIAL PRIMARY KEY,
+      title TEXT,
       text TEXT,
       x INTEGER,
       y INTEGER,

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
-import { Lock, X, GripHorizontal } from 'lucide-react'; // Removed unused Unlock import
+import { Lock, X, GripHorizontal } from 'lucide-react';
 import { updateNotePosition, unlockNote, deleteNote, NoteData } from '@/app/actions';
 import clsx from 'clsx';
 
@@ -10,25 +10,22 @@ export default function StickyNote({ note }: { note: NoteData }) {
   const [isDragging, setIsDragging] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
-  // FIX: Removed 'async' keyword here to satisfy TypeScript
   const handleStop = (e: DraggableEvent, data: DraggableData) => {
     setIsDragging(false);
     if (!note.is_locked) {
-      // We call the server action here without 'await' so the function returns void, not a Promise
       updateNotePosition(note.id, data.x, data.y);
     }
   };
 
   const handleUnlock = async () => {
     if (!note.is_locked) return;
-    const pwd = prompt("Enter password to unlock this note:") || "";
+    const pwd = prompt("Enter password to unlock:") || "";
     const success = await unlockNote(note.id, pwd);
     if (!success) alert("Wrong password!");
   };
 
   const handleDelete = async () => {
-    const confirm = window.confirm("Delete this note?");
-    if (!confirm) return;
+    if(!window.confirm("Delete this note?")) return;
     await deleteNote(note.id); 
   };
 
@@ -36,49 +33,38 @@ export default function StickyNote({ note }: { note: NoteData }) {
     <div
       ref={nodeRef}
       className={clsx(
-        'relative w-full mb-4 md:mb-0 md:absolute md:w-72', 
-        'p-5 shadow-lg rounded-lg transition-all duration-200',
-        'flex flex-col gap-3',
-        note.color,
-        note.is_locked ? 'opacity-90 border-2 border-red-400/50' : 'hover:scale-[1.02]',
-        isDragging && 'z-50 scale-110 shadow-2xl rotate-2',
-        !note.is_locked && 'cursor-grab active:cursor-grabbing'
+        'relative w-full md:w-64 shadow-xl transition-all duration-200 flex flex-col',
+        note.color, // Apply the color chosen from the form
+        // Styling: a bit of rotation for realism if dragging
+        isDragging ? 'rotate-3 scale-105 z-50 cursor-grabbing' : 'rotate-0',
+        !note.is_locked && 'cursor-grab',
+        // Lock styling
+        note.is_locked && 'opacity-80 grayscale-[0.3] border-2 border-dashed border-stone-400'
       )}
+      // Add a tape look at top
+      style={{ boxShadow: '2px 4px 6px rgba(0,0,0,0.1)' }}
     >
-      <div className="flex justify-between items-center pb-2 border-b border-black/5">
-        <div className="flex gap-2">
-          {note.is_locked ? (
-            <button
-              onClick={handleUnlock}
-              className="bg-red-500/20 text-red-800 p-1.5 rounded-full hover:bg-red-500/30 transition"
-              title="Locked (Click to Unlock)"
-            >
-              <Lock size={14} />
-            </button>
-          ) : (
-             <div className="text-black/30">
-               <GripHorizontal size={20} />
-             </div>
-          )}
-        </div>
-        
-        {!note.is_locked && (
-          <button
-            onClick={handleDelete}
-            className="text-black/40 hover:text-red-600 transition p-1"
-            title="Delete Note"
-          >
-            <X size={18} />
-          </button>
-        )}
-      </div>
-      
-      <p className="font-handwriting text-xl leading-relaxed text-gray-800 break-words whitespace-pre-wrap">
-        {note.text}
-      </p>
+      {/* Tape visual */}
+      <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-white/30 backdrop-blur-sm rotate-1"></div>
 
-      <div className="text-[10px] text-black/40 font-sans font-bold uppercase tracking-wider flex justify-between">
-         <span>{note.is_locked ? 'Read Only' : 'Editable'}</span>
+      {/* Header */}
+      <div className="flex justify-between items-start p-3 pb-0">
+         {note.is_locked ? (
+            <button onClick={handleUnlock} className="text-stone-600 hover:text-black"><Lock size={14}/></button>
+         ) : (
+            <div className="text-black/20"><GripHorizontal size={16}/></div>
+         )}
+         {!note.is_locked && (
+            <button onClick={handleDelete} className="text-black/30 hover:text-red-600"><X size={16}/></button>
+         )}
+      </div>
+
+      {/* Content */}
+      <div className="p-4 pt-1 font-handwriting">
+        {note.title && (
+          <h3 className="font-bold text-lg mb-1 leading-tight text-black/90">{note.title}</h3>
+        )}
+        <p className="text-xl leading-snug text-black/80 whitespace-pre-wrap break-words">{note.text}</p>
       </div>
     </div>
   );
@@ -89,20 +75,14 @@ export default function StickyNote({ note }: { note: NoteData }) {
         <Draggable
           nodeRef={nodeRef}
           defaultPosition={{ x: note.x, y: note.y }}
-          onStart={() => {
-            if (note.is_locked) return false;
-            setIsDragging(true);
-          }}
+          onStart={() => { if (note.is_locked) return false; setIsDragging(true); }}
           onStop={handleStop}
           disabled={note.is_locked}
         >
-          {NoteCard}
+          <div className="absolute">{NoteCard}</div>
         </Draggable>
       </div>
-
-      <div className="block md:hidden">
-        {NoteCard}
-      </div>
+      <div className="block md:hidden mb-4">{NoteCard}</div>
     </>
   );
 }
