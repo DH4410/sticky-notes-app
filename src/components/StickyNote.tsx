@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
 import { Lock, X, GripHorizontal, Pencil, Check } from 'lucide-react';
 import { updateNotePosition, unlockNote, deleteNote, updateNoteContent, NoteData } from '@/app/actions';
@@ -8,13 +8,31 @@ import clsx from 'clsx';
 
 export default function StickyNote({ note }: { note: NoteData }) {
   const [isDragging, setIsDragging] = useState(false);
-  const [isEditing, setIsEditing] = useState(false); // NEW: Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
   
-  // Local state for editing
+  // Track position in local state
+  const [position, setPosition] = useState({ x: note.x, y: note.y });
+
   const [editTitle, setEditTitle] = useState(note.title || '');
   const [editText, setEditText] = useState(note.text || '');
-
   const nodeRef = useRef<HTMLDivElement>(null);
+
+  // FIX: Safer Sync Logic
+  // Only update local position if server data is DIFFERENT and we aren't dragging
+  useEffect(() => {
+    if (!isDragging) {
+      if (position.x !== note.x || position.y !== note.y) {
+        setPosition({ x: note.x, y: note.y });
+      }
+    }
+    // We explicitly ignore 'position' in deps to prevent loop, 
+    // we only care when 'note' changes from the outside.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.x, note.y, isDragging]);
+
+  const handleDrag = (e: DraggableEvent, data: DraggableData) => {
+    setPosition({ x: data.x, y: data.y });
+  };
 
   const handleStop = (e: DraggableEvent, data: DraggableData) => {
     setIsDragging(false);
@@ -52,20 +70,15 @@ export default function StickyNote({ note }: { note: NoteData }) {
         note.is_locked && 'opacity-90 grayscale-[0.1] border-dashed border-slate-400'
       )}
     >
-      {/* Tape Effect */}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-white/20 rounded-full blur-[1px]"></div>
       <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-4 bg-yellow-100/30 backdrop-blur-sm rotate-1 border-l border-r border-white/20"></div>
 
-      {/* Header */}
       <div className="flex justify-between items-start p-3 pb-0 opacity-60 hover:opacity-100 transition-opacity">
          {note.is_locked ? (
             <button onClick={handleUnlock} className="text-red-800 bg-red-500/10 p-1 rounded hover:bg-red-500/20"><Lock size={12}/></button>
          ) : (
             <div className="flex gap-2">
-               {/* Drag Handle */}
                <div className="text-black/40 cursor-grab"><GripHorizontal size={16}/></div>
-               
-               {/* NEW: Edit Toggle */}
                {isEditing ? (
                  <button onClick={handleSave} className="text-green-700 hover:bg-white/30 p-0.5 rounded"><Check size={16}/></button>
                ) : (
@@ -79,10 +92,8 @@ export default function StickyNote({ note }: { note: NoteData }) {
          )}
       </div>
 
-      {/* Content */}
       <div className="p-5 pt-2 font-handwriting min-h-[140px] flex flex-col">
         {isEditing ? (
-          // EDIT MODE: Inputs
           <>
             <input 
               value={editTitle} 
@@ -98,7 +109,6 @@ export default function StickyNote({ note }: { note: NoteData }) {
             <button onClick={handleSave} className="mt-2 bg-black/10 hover:bg-black/20 text-xs py-1 rounded font-sans">Save Changes</button>
           </>
         ) : (
-          // VIEW MODE: Text
           <>
             {note.title && (
               <h3 className="font-bold text-xl mb-2 leading-tight text-slate-900/90 border-b border-black/5 pb-1">{note.title}</h3>
@@ -115,8 +125,8 @@ export default function StickyNote({ note }: { note: NoteData }) {
       <div className="hidden md:block">
         <Draggable
           nodeRef={nodeRef}
-          defaultPosition={{ x: note.x, y: note.y }}
-          // Disable drag if we are Editing or Locked
+          position={position}
+          onDrag={handleDrag}
           onStart={() => { if (note.is_locked || isEditing) return false; setIsDragging(true); }}
           onStop={handleStop}
           disabled={note.is_locked || isEditing}
