@@ -35,7 +35,7 @@ export default async function Home() {
           
           {/* Title Input */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-stone-500 uppercase">Title</label>
+            <label className="text-xs font-bold text-stone-500 ">Title</label>
             <input
               name="title"
               placeholder="Meeting Notes"
@@ -45,7 +45,7 @@ export default async function Home() {
 
           {/* Content Input */}
           <div className="space-y-1">
-             <label className="text-xs font-bold text-stone-500 uppercase">Content</label>
+             <label className="text-xs font-bold text-stone-500 ">Content</label>
             <textarea
               name="text"
               required
@@ -56,7 +56,7 @@ export default async function Home() {
 
           {/* Color Picker */}
           <div className="space-y-1">
-             <label className="text-xs font-bold text-stone-500 uppercase">Color</label>
+             <label className="text-xs font-bold text-stone-500 ">Color</label>
              <div className="flex gap-2 flex-wrap">
                {colors.map((c) => (
                  <label key={c.value} className="cursor-pointer relative">
@@ -69,7 +69,7 @@ export default async function Home() {
 
           {/* Password */}
           <div className="space-y-1 pt-4 border-t border-stone-100">
-             <label className="text-xs font-bold text-stone-500 uppercase flex items-center gap-1">
+             <label className="text-xs font-bold text-stone-500  flex items-center gap-1">
                <Lock size={12} /> Password (Optional)
              </label>
             <input
