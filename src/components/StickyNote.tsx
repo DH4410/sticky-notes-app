@@ -10,32 +10,41 @@ export default function StickyNote({ note }: { note: NoteData }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Track position in local state
+  // Track position locally
   const [position, setPosition] = useState({ x: note.x, y: note.y });
+  
+  // NEW: Track when we last touched the note to prevent "Rubber banding"
+  const lastDragTime = useRef(0);
 
   const [editTitle, setEditTitle] = useState(note.title || '');
   const [editText, setEditText] = useState(note.text || '');
   const nodeRef = useRef<HTMLDivElement>(null);
 
-  // FIX: Safer Sync Logic
-  // Only update local position if server data is DIFFERENT and we aren't dragging
+  // --- SYNC LOGIC ---
   useEffect(() => {
-    if (!isDragging) {
-      if (position.x !== note.x || position.y !== note.y) {
-        setPosition({ x: note.x, y: note.y });
-      }
-    }
-    // We explicitly ignore 'position' in deps to prevent loop, 
-    // we only care when 'note' changes from the outside.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.x, note.y, isDragging]);
+    // 1. If I am holding the note, don't update from server.
+    if (isDragging) return;
 
+    // 2. If I let go less than 3 seconds ago, don't update from server yet.
+    // (This waits for the database to finish saving my changes)
+    if (Date.now() - lastDragTime.current < 3000) return;
+
+    // 3. Otherwise, if server data is different, snap to it.
+    if (position.x !== note.x || position.y !== note.y) {
+      setPosition({ x: note.x, y: note.y });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.x, note.y, isDragging]); // Run when server data changes
+
+  // --- DRAG HANDLERS ---
   const handleDrag = (e: DraggableEvent, data: DraggableData) => {
     setPosition({ x: data.x, y: data.y });
   };
 
   const handleStop = (e: DraggableEvent, data: DraggableData) => {
     setIsDragging(false);
+    lastDragTime.current = Date.now(); // Mark the time we stopped
+    
     if (!note.is_locked) {
       updateNotePosition(note.id, data.x, data.y);
     }
@@ -62,17 +71,24 @@ export default function StickyNote({ note }: { note: NoteData }) {
     <div
       ref={nodeRef}
       className={clsx(
-        'relative w-full md:w-72 flex flex-col transition-all duration-200',
+        'relative w-full md:w-72 flex flex-col',
         'rounded-sm border-2 border-white/50 shadow-[2px_4px_12px_rgba(0,0,0,0.1)]', 
         note.color,
+        
+        // FIX: Only animate transitions when NOT dragging. 
+        // This makes dragging instant (0 lag) but snapping smooth.
+        !isDragging ? 'transition-all duration-300' : 'transition-none',
+
         isDragging ? 'rotate-2 scale-105 z-50 shadow-2xl cursor-grabbing' : 'rotate-0',
         !note.is_locked && !isEditing && 'cursor-grab hover:-translate-y-1',
         note.is_locked && 'opacity-90 grayscale-[0.1] border-dashed border-slate-400'
       )}
     >
+      {/* Tape Effect */}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-white/20 rounded-full blur-[1px]"></div>
       <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-4 bg-yellow-100/30 backdrop-blur-sm rotate-1 border-l border-r border-white/20"></div>
 
+      {/* Header */}
       <div className="flex justify-between items-start p-3 pb-0 opacity-60 hover:opacity-100 transition-opacity">
          {note.is_locked ? (
             <button onClick={handleUnlock} className="text-red-800 bg-red-500/10 p-1 rounded hover:bg-red-500/20"><Lock size={12}/></button>
@@ -86,12 +102,12 @@ export default function StickyNote({ note }: { note: NoteData }) {
                )}
             </div>
          )}
-         
          {!note.is_locked && (
             <button onClick={handleDelete} className="text-black/40 hover:text-red-600 hover:bg-white/20 p-1 rounded"><X size={16}/></button>
          )}
       </div>
 
+      {/* Content */}
       <div className="p-5 pt-2 font-handwriting min-h-[140px] flex flex-col">
         {isEditing ? (
           <>
@@ -111,9 +127,9 @@ export default function StickyNote({ note }: { note: NoteData }) {
         ) : (
           <>
             {note.title && (
-              <h3 className="font-bold text-xl mb-2 leading-tight text-slate-900/90 border-b border-black/5 pb-1">{note.title}</h3>
+              <h3 className="font-bold text-xl mb-2 leading-tight text-slate-900/90 border-b border-black/5 pb-1 select-none">{note.title}</h3>
             )}
-            <p className="text-xl leading-relaxed text-slate-800/85 whitespace-pre-wrap break-words">{note.text}</p>
+            <p className="text-xl leading-relaxed text-slate-800/85 whitespace-pre-wrap break-words select-none">{note.text}</p>
           </>
         )}
       </div>
