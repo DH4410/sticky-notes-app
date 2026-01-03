@@ -2,12 +2,18 @@
 
 import React, { useState, useRef } from 'react';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
-import { Lock, X, GripHorizontal } from 'lucide-react';
-import { updateNotePosition, unlockNote, deleteNote, NoteData } from '@/app/actions';
+import { Lock, X, GripHorizontal, Pencil, Check } from 'lucide-react';
+import { updateNotePosition, unlockNote, deleteNote, updateNoteContent, NoteData } from '@/app/actions';
 import clsx from 'clsx';
 
 export default function StickyNote({ note }: { note: NoteData }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // NEW: Edit mode state
+  
+  // Local state for editing
+  const [editTitle, setEditTitle] = useState(note.title || '');
+  const [editText, setEditText] = useState(note.text || '');
+
   const nodeRef = useRef<HTMLDivElement>(null);
 
   const handleStop = (e: DraggableEvent, data: DraggableData) => {
@@ -19,7 +25,7 @@ export default function StickyNote({ note }: { note: NoteData }) {
 
   const handleUnlock = async () => {
     if (!note.is_locked) return;
-    const pwd = prompt("Enter password to unlock:") || "";
+    const pwd = prompt("Enter password (or Admin Code) to unlock:") || "";
     const success = await unlockNote(note.id, pwd);
     if (!success) alert("Wrong password!");
   };
@@ -29,17 +35,20 @@ export default function StickyNote({ note }: { note: NoteData }) {
     await deleteNote(note.id); 
   };
 
+  const handleSave = async () => {
+    await updateNoteContent(note.id, editTitle, editText);
+    setIsEditing(false);
+  };
+
   const NoteCard = (
     <div
       ref={nodeRef}
       className={clsx(
         'relative w-full md:w-72 flex flex-col transition-all duration-200',
-        // Style: Rounded corners, border to pop against grid, deep shadow
-        'rounded-sm border-2 border-white/50',
-        'shadow-[2px_4px_12px_rgba(0,0,0,0.1)]', 
+        'rounded-sm border-2 border-white/50 shadow-[2px_4px_12px_rgba(0,0,0,0.1)]', 
         note.color,
         isDragging ? 'rotate-2 scale-105 z-50 shadow-2xl cursor-grabbing' : 'rotate-0',
-        !note.is_locked && 'cursor-grab hover:-translate-y-1 hover:shadow-xl',
+        !note.is_locked && !isEditing && 'cursor-grab hover:-translate-y-1',
         note.is_locked && 'opacity-90 grayscale-[0.1] border-dashed border-slate-400'
       )}
     >
@@ -52,8 +61,19 @@ export default function StickyNote({ note }: { note: NoteData }) {
          {note.is_locked ? (
             <button onClick={handleUnlock} className="text-red-800 bg-red-500/10 p-1 rounded hover:bg-red-500/20"><Lock size={12}/></button>
          ) : (
-            <div className="text-black/40"><GripHorizontal size={16}/></div>
+            <div className="flex gap-2">
+               {/* Drag Handle */}
+               <div className="text-black/40 cursor-grab"><GripHorizontal size={16}/></div>
+               
+               {/* NEW: Edit Toggle */}
+               {isEditing ? (
+                 <button onClick={handleSave} className="text-green-700 hover:bg-white/30 p-0.5 rounded"><Check size={16}/></button>
+               ) : (
+                 <button onClick={() => setIsEditing(true)} className="text-black/50 hover:text-black hover:bg-white/20 p-0.5 rounded"><Pencil size={14}/></button>
+               )}
+            </div>
          )}
+         
          {!note.is_locked && (
             <button onClick={handleDelete} className="text-black/40 hover:text-red-600 hover:bg-white/20 p-1 rounded"><X size={16}/></button>
          )}
@@ -61,15 +81,31 @@ export default function StickyNote({ note }: { note: NoteData }) {
 
       {/* Content */}
       <div className="p-5 pt-2 font-handwriting min-h-[140px] flex flex-col">
-        {note.title && (
-          <h3 className="font-bold text-xl mb-2 leading-tight text-slate-900/90 border-b border-black/5 pb-1">{note.title}</h3>
+        {isEditing ? (
+          // EDIT MODE: Inputs
+          <>
+            <input 
+              value={editTitle} 
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="bg-white/40 border-b border-black/10 font-bold text-xl mb-2 p-1 focus:outline-none rounded"
+              placeholder="Title..."
+            />
+            <textarea 
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="bg-white/40 flex-1 resize-none text-xl p-1 focus:outline-none rounded"
+            />
+            <button onClick={handleSave} className="mt-2 bg-black/10 hover:bg-black/20 text-xs py-1 rounded font-sans">Save Changes</button>
+          </>
+        ) : (
+          // VIEW MODE: Text
+          <>
+            {note.title && (
+              <h3 className="font-bold text-xl mb-2 leading-tight text-slate-900/90 border-b border-black/5 pb-1">{note.title}</h3>
+            )}
+            <p className="text-xl leading-relaxed text-slate-800/85 whitespace-pre-wrap break-words">{note.text}</p>
+          </>
         )}
-        <p className="text-xl leading-relaxed text-slate-800/85 whitespace-pre-wrap break-words">{note.text}</p>
-      </div>
-      
-      {/* Footer Status */}
-      <div className="px-4 pb-2 text-[9px] font-bold text-black/20 uppercase tracking-widest text-right select-none">
-        {note.is_locked ? 'Locked' : 'Sticky'}
       </div>
     </div>
   );
@@ -80,9 +116,10 @@ export default function StickyNote({ note }: { note: NoteData }) {
         <Draggable
           nodeRef={nodeRef}
           defaultPosition={{ x: note.x, y: note.y }}
-          onStart={() => { if (note.is_locked) return false; setIsDragging(true); }}
+          // Disable drag if we are Editing or Locked
+          onStart={() => { if (note.is_locked || isEditing) return false; setIsDragging(true); }}
           onStop={handleStop}
-          disabled={note.is_locked}
+          disabled={note.is_locked || isEditing}
         >
           <div className="absolute">{NoteCard}</div>
         </Draggable>

@@ -1,7 +1,6 @@
 import { sql } from '@vercel/postgres';
 
 export async function createTable() {
-  // We added 'title' and kept 'password'
   await sql`
     CREATE TABLE IF NOT EXISTS notes (
       id SERIAL PRIMARY KEY,
@@ -12,6 +11,7 @@ export async function createTable() {
       color TEXT,
       password TEXT, 
       is_locked BOOLEAN DEFAULT false,
+      user_id TEXT, 
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
