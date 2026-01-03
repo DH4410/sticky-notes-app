@@ -1,14 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --font-caveat: 'Comic Sans MS', cursive; /* Fallback if font fails load */
+  --font-caveat: 'Comic Sans MS', cursive;
 }
 
-/* Connect the handwriting font */
 .font-handwriting {
   font-family: var(--font-caveat), cursive;
 }
 
-body {
-  background-color: #f5f5f4; /* stone-100 */
+/* GRAPH PAPER BACKGROUND */
+.bg-grid-paper {
+  background-color: #f8fafc; /* Slate-50 */
+  background-image: 
+    linear-gradient(#e2e8f0 1px, transparent 1px),
+    linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Hide scrollbar for cleaner UI but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
