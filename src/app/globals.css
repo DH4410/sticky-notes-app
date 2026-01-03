@@ -1,11 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+:root {
+  --font-caveat: 'Comic Sans MS', cursive; /* Fallback if font fails load */
+}
+
+/* Connect the handwriting font */
 .font-handwriting {
   font-family: var(--font-caveat), cursive;
 }
 
 body {
-  color: #1a1a1a;
+  background-color: #f5f5f4; /* stone-100 */
 }
