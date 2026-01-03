@@ -1,92 +1,108 @@
-// src/components/StickyNote.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
-import { Lock, Unlock, X } from 'lucide-react';
+import { Lock, X, GripHorizontal } from 'lucide-react'; // Removed unused Unlock import
 import { updateNotePosition, unlockNote, deleteNote, NoteData } from '@/app/actions';
 import clsx from 'clsx';
 
 export default function StickyNote({ note }: { note: NoteData }) {
   const [isDragging, setIsDragging] = useState(false);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
-  // Fix: Explicitly type the event arguments for Draggable
+  // FIX: Removed 'async' keyword here to satisfy TypeScript
   const handleStop = (e: DraggableEvent, data: DraggableData) => {
     setIsDragging(false);
     if (!note.is_locked) {
-      void updateNotePosition(note.id, data.x, data.y);
+      // We call the server action here without 'await' so the function returns void, not a Promise
+      updateNotePosition(note.id, data.x, data.y);
     }
   };
 
   const handleUnlock = async () => {
     if (!note.is_locked) return;
-
-    // Use browser prompt to get password
     const pwd = prompt("Enter password to unlock this note:") || "";
     const success = await unlockNote(note.id, pwd);
-    
-    if (!success) {
-      alert("Wrong password!");
-    }
+    if (!success) alert("Wrong password!");
   };
 
   const handleDelete = async () => {
-    const confirm = window.confirm("Are you sure you want to delete this?");
+    const confirm = window.confirm("Delete this note?");
     if (!confirm) return;
-
-    // If it has a password, we might need it, but usually delete is hidden if locked
     await deleteNote(note.id); 
   };
 
-  return (
-    <Draggable
-      defaultPosition={{ x: note.x, y: note.y }}
-      // Fix: Types match now
-      onStart={() => {
-        if (note.is_locked) return false; // Return false stops drag
-        setIsDragging(true);
-      }}
-      onStop={handleStop}
-      disabled={note.is_locked}
+  const NoteCard = (
+    <div
+      ref={nodeRef}
+      className={clsx(
+        'relative w-full mb-4 md:mb-0 md:absolute md:w-72', 
+        'p-5 shadow-lg rounded-lg transition-all duration-200',
+        'flex flex-col gap-3',
+        note.color,
+        note.is_locked ? 'opacity-90 border-2 border-red-400/50' : 'hover:scale-[1.02]',
+        isDragging && 'z-50 scale-110 shadow-2xl rotate-2',
+        !note.is_locked && 'cursor-grab active:cursor-grabbing'
+      )}
     >
-      <div
-        className={clsx(
-          'absolute w-64 p-4 shadow-lg rounded-sm cursor-grab active:cursor-grabbing transition-transform',
-          note.color,
-          note.is_locked && 'opacity-90 border-2 border-red-400 cursor-not-allowed',
-          isDragging && 'z-50 scale-105'
-        )}
-      >
-        <div className="flex justify-between items-start mb-2 border-b border-black/10 pb-2">
+      <div className="flex justify-between items-center pb-2 border-b border-black/5">
+        <div className="flex gap-2">
           {note.is_locked ? (
             <button
               onClick={handleUnlock}
-              className="text-red-600 hover:text-red-800 flex gap-1 items-center text-xs font-bold"
-              title="Unlock Note"
+              className="bg-red-500/20 text-red-800 p-1.5 rounded-full hover:bg-red-500/30 transition"
+              title="Locked (Click to Unlock)"
             >
-              <Lock size={14} /> LOCKED
+              <Lock size={14} />
             </button>
           ) : (
-            <div className="text-green-700 flex gap-1 items-center text-xs font-bold opacity-50">
-               <Unlock size={14} /> OPEN
-            </div>
-          )}
-          
-          {!note.is_locked && (
-            <button
-              onClick={handleDelete}
-              className="text-red-500 hover:text-red-700"
-              title="Delete Note"
-            >
-              <X size={16} />
-            </button>
+             <div className="text-black/30">
+               <GripHorizontal size={20} />
+             </div>
           )}
         </div>
         
-        <p className="whitespace-pre-wrap break-words text-gray-800 font-sans">
-          {note.text}
-        </p>
+        {!note.is_locked && (
+          <button
+            onClick={handleDelete}
+            className="text-black/40 hover:text-red-600 transition p-1"
+            title="Delete Note"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
-    </Draggable>
+      
+      <p className="font-handwriting text-xl leading-relaxed text-gray-800 break-words whitespace-pre-wrap">
+        {note.text}
+      </p>
+
+      <div className="text-[10px] text-black/40 font-sans font-bold uppercase tracking-wider flex justify-between">
+         <span>{note.is_locked ? 'Read Only' : 'Editable'}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="hidden md:block">
+        <Draggable
+          nodeRef={nodeRef}
+          defaultPosition={{ x: note.x, y: note.y }}
+          onStart={() => {
+            if (note.is_locked) return false;
+            setIsDragging(true);
+          }}
+          onStop={handleStop}
+          disabled={note.is_locked}
+        >
+          {NoteCard}
+        </Draggable>
+      </div>
+
+      <div className="block md:hidden">
+        {NoteCard}
+      </div>
+    </>
   );
 }
