@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add a handwritten font style if you want, or just use sans */
+.font-handwriting {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+}
